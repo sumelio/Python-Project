@@ -1,0 +1,10 @@
+
+Python 2.7.12
+
+Linux m-XPS-L412Z 4.4.0-93-generic #116-Ubuntu SMP Fri Aug 11 21:17:52 UTC 2017 i686 i686 i686 GNU/Linux
+ubuntu 16.04 LTS
+
+
+pycurl (7.43.0) 
+pysqlite (2.8.3) 
+

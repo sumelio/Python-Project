@@ -1,0 +1,265 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+ 
+import sys
+#import pycurl 
+import sqlite3 
+import xml.etree.ElementTree as ET
+import StringIO
+import requests 
+
+# ------------------------------ init ------------------------------------------------
+ 
+ 
+
+wrapper1 =  """<html>
+    <head>
+    <title><h5>Auto lab</h5></title>
+    <style> 
+	  div.contain {color: black; width:250px;  padding: 0; list-style-type: none; }
+      div.title { color: black; width:250px;   list-style-type: none;    font-weight: bold; padding: 0.7cm 0.1cm 0.0cm 0.7cm; }
+	  div.node   {width:250px;  padding: 0.7cm 0.4cm 0.3cm 0.4cm; list-style-type: none; }
+ 
+	  
+	  .node1 { border-left: 5px solid #F5876E;  color: #F5876E; }
+ 
+	  .node1.noactive {display:none;}
+      
+	  .node2 {border-left: 5px solid #61A8DC;  color: #61A8DC;  }
+ 
+	  .node2.noactive {display:none;}
+      
+	  
+	  .node3 {border-left: 5px solid #F5876E; color: #F5876E;  }
+	  .node3.noactive {display:none;}
+      .node4 {border-left: 5px solid #8EBD40; color: #8EBD40;  }
+	  .node4.noactive {display:none;}
+      .node5 {border-left: 5px solid #988CC3; color: #988CC3;   }
+	  .node5.noactive {display:none;}
+      .node6 { border-left: 5px solid #D8C86E; color: #D8C86E; }
+	  .node6.noactive {display:none;}
+ 
+ </style>
+    </head> 
+    <body>    
+ <div class="contain"  align="left"> <h1> Test AutoLab </h1>
+</div>
+    <div class="contain" border="12" align="left"> """
+
+wrapper2 = """
+             <div class='title'><h3><input type="button" onclick="toggleMenu('%s_%s')" id="%s_%sbutton" value="-" />   %s</h3></div>
+             <ul>
+              <div class='node node%s' id='%s_%s' >
+             <li  ><b>%s</b></li>
+			 <li  ><b>Id</b>: %s</li>
+             <li><b>Level</b>: %s</li>
+             
+             <li><b>best offer</b>: %s</li>
+             <li><b>Parent</b>: %s</li>
+              <li><b>leaf</b>: %s
+			 """ 
+wrapper2_1 = """<img src="http://www.inbite.com.mx/data/uploads/images/ico_hoja.png" %s alt="true" height="20" width="20" data-rotate="90"  > </li>
+            
+             <li>
+             """
+wrapper3 = """</li></div></ul>"""
+
+wrapper4="""<div>
+  <script>
+  	  var x = document.getElementById("contain");
+	
+      function toggleMenu( id){
+	    var $burguerButton = document.getElementById(id);
+
+
+ console.log ($burguerButton.style.display );
+		 var $button = document.getElementById(id + 'button');
+		   if ($button.value == '-') {
+		      $button.value = '+';
+			   try{
+                 $burguerButton.classList.toggle('noactive'); 
+		       }catch(err) {
+                 console.log ($burguerButton.style.display );
+				 $burguerButton.className +='noactive';
+				 $burguerButton.style.display = 'none';
+               }
+			  
+		   }else{
+		   $button.value = '-';
+		   var _id =   $burguerButton.id.split(",")[1];
+			   try{
+                 $burguerButton.classList.toggle('noactive'); 
+		       }catch(err) {
+                  console.log ($burguerButton.style.display );
+				 $burguerButton.className = $burguerButton.className.replace('noactive','');
+				 $burguerButton.style.display = '';
+				 
+               }		   
+		   
+          }
+        };
+	  
+	  </script>
+	  
+    </body>
+    </html>"""
+
+dataBase = "autolab.db"
+
+# ------------------------------ rebuild ------------------------------------------------
+def rebuild():
+    print "* rebuild ....please wait while data is loading from ebay...."
+    response = StringIO.StringIO()
+    #c = pycurl.Curl()
+    #c.setopt(c.URL, 'https://api.sandbox.ebay.com/ws/api.dll')
+    #c.setopt(c.WRITEFUNCTION, response.write)
+    #c.setopt(c.HTTPHEADER, ['Content-type: text/xml',
+    #                        'Accept-Charset: UTF-8',
+    #                       'X-EBAY-API-CALL-NAME: GetCategories',
+    #                       'X-EBAY-API-APP-NAME: EchoBay62-5538-466c-b43b-662768d6841',
+    #                       'X-EBAY-API-CERT-NAME: 00dd08ab-2082-4e3c-9518-5f4298f296db',
+    #                       'X-EBAY-API-DEV-NAME: 16a26b1b-26cf-442d-906d-597b60c41c19', 
+    #                       'X-EBAY-API-SITEID: 0',
+    #                       'X-EBAY-API-COMPATIBILITY-LEVEL: 861'])
+    #c.setopt(c.POSTFIELDS, '<?xml version="1.0" encoding="utf-8"?><GetCategoriesRequest xmlns="urn:ebay:apis:eBLBaseComponents">  <RequesterCredentials>        <eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**PlLuWA**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wFk4GlDpaDpAudj6x9nY+seQ**LyoEAA**AAMAAA**wSd/jBCbxJHbYuIfP4ESyC0mHG2Tn4O3v6rO2zmnoVSF614aVDFfLSCkJ5b9wg9nD7rkDzQayiqvwdWeoJkqEpNQx6wjbVQ1pjiIaWdrYRq+dXxxGHlyVd+LqL1oPp/T9PxgaVAuxFXlVMh6wSyoAMRySI6QUzalepa82jSQ/qDaurz40/EIhu6+sizj0mCgjcdamKhp1Jk3Hqmv8FXFnXouQ9Vr0Qt+D1POIFbfEg9ykH1/I2CYkZBMIG+k6Pf00/UujbQdne6HUAu6CSj9wGsqQSAEPIXXvEnVmtU+6U991ZUhPuA/DMFEfVlibvNLBA7Shslp2oTy2T0wlpJN+f/Jle3gurHLIPc6EkEmckEpmSpFEyuBKz+ix4Cf4wYbcUk/Gr3kGdSi20XQGu/ZnJ7Clz4vVak9iJjN99j8lwA2zKW+CBRuHBjZdaUiDctSaADHwfz/x+09bIU9icgpzuOuKooMM5STbt+yJlJZdE3SRZHwilC4dToTQeVhAXA4tFZcDrZFzBmJsoRsJYrCdkJBPeGBub+fqomQYyKt1J0LAQ5Y0FQxLHBIp0cRZTPAuL/MNxQ/UXcxQTXjoCSdZd7B55f0UapU3EsqetEFvIMPxCPJ63YahVprODDva9Kz/Htm3piKyWzuCXfeu3siJvHuOVyx7Q4wyHrIyiJDNz5b9ABAKKauxDP32uqD7jqDzsVLH11/imKLLdl0U5PN+FP30XAQGBAFkHf+pAvOFLrdDTSjT3oQhFRzRPzLWkFg</eBayAuthToken>  </RequesterCredentials>  <CategorySiteID>0</CategorySiteID>  <DetailLevel>ReturnAll</DetailLevel></GetCategoriesRequest>')
+    #c.perform()
+    #c.close() 
+    payload = '<?xml version="1.0" encoding="utf-8"?><GetCategoriesRequest xmlns="urn:ebay:apis:eBLBaseComponents">  <RequesterCredentials>        <eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**PlLuWA**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wFk4GlDpaDpAudj6x9nY+seQ**LyoEAA**AAMAAA**wSd/jBCbxJHbYuIfP4ESyC0mHG2Tn4O3v6rO2zmnoVSF614aVDFfLSCkJ5b9wg9nD7rkDzQayiqvwdWeoJkqEpNQx6wjbVQ1pjiIaWdrYRq+dXxxGHlyVd+LqL1oPp/T9PxgaVAuxFXlVMh6wSyoAMRySI6QUzalepa82jSQ/qDaurz40/EIhu6+sizj0mCgjcdamKhp1Jk3Hqmv8FXFnXouQ9Vr0Qt+D1POIFbfEg9ykH1/I2CYkZBMIG+k6Pf00/UujbQdne6HUAu6CSj9wGsqQSAEPIXXvEnVmtU+6U991ZUhPuA/DMFEfVlibvNLBA7Shslp2oTy2T0wlpJN+f/Jle3gurHLIPc6EkEmckEpmSpFEyuBKz+ix4Cf4wYbcUk/Gr3kGdSi20XQGu/ZnJ7Clz4vVak9iJjN99j8lwA2zKW+CBRuHBjZdaUiDctSaADHwfz/x+09bIU9icgpzuOuKooMM5STbt+yJlJZdE3SRZHwilC4dToTQeVhAXA4tFZcDrZFzBmJsoRsJYrCdkJBPeGBub+fqomQYyKt1J0LAQ5Y0FQxLHBIp0cRZTPAuL/MNxQ/UXcxQTXjoCSdZd7B55f0UapU3EsqetEFvIMPxCPJ63YahVprODDva9Kz/Htm3piKyWzuCXfeu3siJvHuOVyx7Q4wyHrIyiJDNz5b9ABAKKauxDP32uqD7jqDzsVLH11/imKLLdl0U5PN+FP30XAQGBAFkHf+pAvOFLrdDTSjT3oQhFRzRPzLWkFg</eBayAuthToken>  </RequesterCredentials>  <CategorySiteID>0</CategorySiteID>  <DetailLevel>ReturnAll</DetailLevel></GetCategoriesRequest>'
+   
+    
+    headers = {'Content-type':' text/xml',
+                            'Accept-Charset':' UTF-8',
+                           'X-EBAY-API-CALL-NAME':' GetCategories',
+                           'X-EBAY-API-APP-NAME':' EchoBay62-5538-466c-b43b-662768d6841',
+                           'X-EBAY-API-CERT-NAME':' 00dd08ab-2082-4e3c-9518-5f4298f296db',
+                           'X-EBAY-API-DEV-NAME':' 16a26b1b-26cf-442d-906d-597b60c41c19', 
+                           'X-EBAY-API-SITEID':' 0',
+                           'X-EBAY-API-COMPATIBILITY-LEVEL':' 861'}
+
+    r = requests.post('https://api.sandbox.ebay.com/ws/api.dll',headers=headers, data = payload)
+    #root = ET.fromstring(response.getvalue())
+    root = ET.fromstring(r.text.encode('utf-8'))
+
+  
+    conn = sqlite3.connect(dataBase)
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS  category (BestOfferEnabled TEXT, AutoPayEnabled TEXT,CategoryID NUMERIC, CategoryLevel NUMERIC, CategoryName TEXT,     CategoryParentID NUMERIC, Expired TEXT, LeafCategory  TEXT)")
+    cursor.execute("delete from category ")
+
+    listicle = []
+    for child in root.iter("{urn:ebay:apis:eBLBaseComponents}Category"): 
+           try:
+             _BestOfferEnabled = child.find("{urn:ebay:apis:eBLBaseComponents}BestOfferEnabled").text
+           except:
+             _BestOfferEnabled = ""
+
+           _CategoryID = child.find("{urn:ebay:apis:eBLBaseComponents}CategoryID").text
+           _CategoryLevel = child.find("{urn:ebay:apis:eBLBaseComponents}CategoryLevel").text
+           _CategoryName = child.find("{urn:ebay:apis:eBLBaseComponents}CategoryName").text
+           _CategoryParentID = child.find("{urn:ebay:apis:eBLBaseComponents}CategoryParentID").text
+           try:
+             _Expired = child.find("{urn:ebay:apis:eBLBaseComponents}Expired").text
+           except:
+             _Expired = ""
+ 
+           try:
+             _LeafCategory = child.find("{urn:ebay:apis:eBLBaseComponents}LeafCategory").text 
+           except:
+             _LeafCategory = ""
+            
+           listicle.append((_BestOfferEnabled, 'null', _CategoryID, _CategoryLevel, _CategoryName, _CategoryParentID, _Expired, _LeafCategory))
+ 
+    cursor.executemany("INSERT INTO category (BestOfferEnabled, AutoPayEnabled,CategoryID, CategoryLevel, CategoryName, CategoryParentID, Expired, LeafCategory) VALUES (?,?,?,?,?,?,?,?)", listicle)
+
+    response.close()
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    print '** rebuild OK....total categories %d inserted' % (len(listicle)) 
+
+
+
+# ------------------------------ render ------------------------------------------------
+def recursiveChildren(parentID,  cursor,  file):
+    qc = cursor.execute("SELECT c1.CategoryID, c1.CategoryLevel, c1.CategoryName, c1.BestOfferEnabled, c1.CategoryParentID, c1.LeafCategory  FROM category c1 WHERE c1.CategoryParentID = ? ", [parentID]) 
+    for data in qc.fetchall():
+		var_CategoryID = data[0]
+		var_CategoryLevel = data[1]
+		var_CategoryName = data[2]
+		var_BestOfferEnabled = data[3]
+		var_CategoryParentID = data[4]
+		var_LeafCategory = data[5]
+		if data[0] !=  data[4]:
+		  whole = wrapper2 % (var_CategoryParentID, var_CategoryID,var_CategoryParentID, var_CategoryID, var_CategoryName, var_CategoryLevel,var_CategoryParentID, var_CategoryID, var_CategoryName, var_CategoryID, var_CategoryLevel,  var_BestOfferEnabled, var_CategoryParentID, var_LeafCategory)
+		  file.write(whole.encode('utf-8'))
+		  if var_LeafCategory == "true":
+		    file.write(wrapper2_1)
+		  recursiveChildren(data[0],  cursor,  file)
+		  file.write(wrapper3)
+ 
+
+
+def render(id):
+    print "*render CategoryID=" + id
+
+    try:	
+      conn = sqlite3.connect(dataBase)
+      cursor = conn.cursor()
+  
+  
+      
+      flag = 0 
+      q = cursor.execute("SELECT c1.CategoryID, c1.CategoryLevel, c1.CategoryName, c1.BestOfferEnabled, c1.CategoryParentID, c1.LeafCategory  FROM category c1 WHERE c1.CategoryID = ? ", [id])
+      
+      
+      for data in q.fetchall():
+  		file = open(id+'.html','w')
+  		file.write(wrapper1)
+  		var_CategoryID = data[0]
+  		var_CategoryLevel = data[1]
+  		var_CategoryName = data[2]
+  		var_BestOfferEnabled = data[3]
+  		var_CategoryParentID = data[4]
+  		var_LeafCategory = data[5]
+   		whole = wrapper2 % (var_CategoryParentID, var_CategoryID,var_CategoryParentID, var_CategoryID, var_CategoryName, var_CategoryLevel,var_CategoryParentID, var_CategoryID, var_CategoryName, var_CategoryID, var_CategoryLevel,  var_BestOfferEnabled, var_CategoryParentID, var_LeafCategory)
+  		file.write(whole.encode('utf-8'))
+  		if var_LeafCategory == "true":
+  		 file.write(wrapper2_1)
+  		recursiveChildren(id,  cursor,  file)
+  		file.write(wrapper3)
+  		flag = 1
+  		file.write(wrapper4)
+  		file.close()
+      conn.commit()
+      cursor.close()
+      conn.close()
+      
+      
+      if flag == 0:
+      
+          print u"No category with ID  %s." % (id) 
+      else: 
+          print u"OK. Created  %s.html" % (id)
+ 
+    except IOError as e:
+        print "I/O error({0}): {1}".format(e.errno, e.strerror)
+    except ValueError:
+        print "Could not convert data to an integer."
+    except:
+        print "\n ERROR. Please execute first ./categories --rebuild \n\n Detail \n Unexpected error:", sys.exc_info()[0]
+        raise
+
+  
+# ------------------------------ Args ------------------------------------------------
+if  len(sys.argv) == 2 and  sys.argv[1] == '--rebuild':
+   rebuild()
+else: 
+     if len(sys.argv) == 3 and sys.argv[1] == '--render' :
+           render(sys.argv[2])
+     else:
+         print "Bad args. Used --rebuild or --render <category_id>"
+
+
+
+
