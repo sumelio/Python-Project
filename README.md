@@ -8,11 +8,8 @@ This program has to two objects:
 The solution is runnable from the command line and operate in two modes corresponding to the tasks above:
 1. When given the command-line argument "--rebuild" it uses the GetCategories API to download the category tree and create the SQLite database. 
 2. When given the command-line argument "--render <category_id>" it should output a file named <category_id>.html that  contains a simple web page displaying the category tree rooted at the given ID. The tree is rendered from the data in your SQLite database. Do not call the GetCategories API! If the database does not exist or no category with the   given ID could be found the program should exit with an error.
-
-
-=========================
-         SQLite
-=========================
+ 
+ ##        SQLite 
 
 SQLite is a SQL database that lives in a single file. It is a very popular library, and most programming languages contain bindings to it. Part of the challenge is to design a SQL schema to store the category tree. Your schema may contain one or more tables. For each category please store at least the following attributes:
 
@@ -21,9 +18,9 @@ o CategoryName
 o CategoryLevel
 o BestOfferEnabled
 
-=========================
-     Sample Session
-=========================
+ 
+ ##    Sample Session
+ 
 
 Here is a sample session with the program:
 
