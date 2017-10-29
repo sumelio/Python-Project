@@ -39,7 +39,9 @@ No category with ID: 6666666666
 
 Example HTML Output:
 
+```bash
 /1.html
 /39.html
+```
 
  
