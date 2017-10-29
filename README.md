@@ -24,6 +24,7 @@ o BestOfferEnabled
 
 Here is a sample session with the program:
 
+```bash
 % ./categories --rebuild
 % ./categories --rebuild
 % ./categories --render 179281
@@ -34,6 +35,7 @@ Here is a sample session with the program:
 179022.html
 % ./categories --render 6666666666
 No category with ID: 6666666666
+```
 
 Example HTML Output:
 
